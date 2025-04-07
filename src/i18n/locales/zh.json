@@ -14,6 +14,7 @@
     "title": "组列表",
     "members": "{{groupName}} 的成员",
     "noMembers": "该组没有成员",
+    "noGroupsInTeam": "该团队下没有组",
     "error": "获取组数据失败，请稍后再试"
   },
   "users": {

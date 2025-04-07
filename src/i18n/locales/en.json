@@ -14,6 +14,7 @@
     "title": "Group List",
     "members": "Members of {{groupName}}",
     "noMembers": "No members in this group",
+    "noGroupsInTeam": "No groups in this team",
     "error": "Failed to get group data, please try again later"
   },
   "users": {
