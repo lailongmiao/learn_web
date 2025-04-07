@@ -1,0 +1,30 @@
+{
+  "app": {
+    "title": "用户和团队管理系统",
+    "loading": "加载中...",
+    "noData": "没有找到数据"
+  },
+  "teams": {
+    "title": "团队列表",
+    "members": "{{teamName}} 的成员",
+    "noMembers": "该团队没有成员",
+    "error": "获取团队数据失败，请稍后再试"
+  },
+  "groups": {
+    "title": "组列表",
+    "members": "{{groupName}} 的成员",
+    "noMembers": "该组没有成员",
+    "error": "获取组数据失败，请稍后再试"
+  },
+  "users": {
+    "title": "所有用户列表",
+    "error": "获取用户数据失败，请稍后再试",
+    "columns": {
+      "id": "ID",
+      "username": "用户名",
+      "email": "邮箱",
+      "teamId": "团队ID",
+      "groupId": "组ID"
+    }
+  }
+} 

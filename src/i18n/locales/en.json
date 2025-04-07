@@ -1,0 +1,30 @@
+{
+  "app": {
+    "title": "User and Team Management System",
+    "loading": "Loading...",
+    "noData": "No data found"
+  },
+  "teams": {
+    "title": "Team List",
+    "members": "Members of {{teamName}}",
+    "noMembers": "No members in this team",
+    "error": "Failed to get team data, please try again later"
+  },
+  "groups": {
+    "title": "Group List",
+    "members": "Members of {{groupName}}",
+    "noMembers": "No members in this group",
+    "error": "Failed to get group data, please try again later"
+  },
+  "users": {
+    "title": "All Users List",
+    "error": "Failed to get user data, please try again later",
+    "columns": {
+      "id": "ID",
+      "username": "Username",
+      "email": "Email",
+      "teamId": "Team ID",
+      "groupId": "Group ID"
+    }
+  }
+} 
