@@ -25,12 +25,10 @@ interface Group {
 
 function App() {
   const { t, i18n } = useTranslation();
-  const [users, setUsers] = useState<User[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [groups, setGroups] = useState<Group[]>([])
   const [teamUsers, setTeamUsers] = useState<User[]>([])
   const [groupUsers, setGroupUsers] = useState<User[]>([])
-  const [filteredGroups, setFilteredGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [teamLoading, setTeamLoading] = useState<boolean>(false)
   const [groupLoading, setGroupLoading] = useState<boolean>(false)
@@ -45,94 +43,59 @@ function App() {
     i18n.changeLanguage(lng);
   };
 
-  // 获取所有用户数据
+  // 获取所有团队数据
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchTeams = async () => {
       try {
         setLoading(true)
-        const response = await axios.get('http://127.0.0.1:3000/api/users')
-        setUsers(response.data)
+        const response = await axios.get('http://127.0.0.1:3000/api/teams')
+        setTeams(response.data)
         setError(null)
       } catch (err) {
-        console.error('获取用户数据失败:', err)
-        setError(t('users.error'))
+        console.error('获取团队数据失败:', err)
+        setError(t('teams.error'))
       } finally {
         setLoading(false)
       }
     }
 
-    fetchUsers()
+    fetchTeams()
   }, [t])
 
-  // 获取所有团队数据
-  useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const response = await axios.get('http://127.0.0.1:3000/api/teams')
-        setTeams(response.data)
-      } catch (err) {
-        console.error('获取团队数据失败:', err)
-      }
-    }
-
-    fetchTeams()
-  }, [])
-
-  // 获取所有组数据
-  useEffect(() => {
-    const fetchGroups = async () => {
-      try {
-        const response = await axios.get('http://127.0.0.1:3000/api/groups')
-        setGroups(response.data)
-      } catch (err) {
-        console.error('获取组数据失败:', err)
-      }
-    }
-
-    fetchGroups()
-  }, [])
-
-  // 当选择团队时过滤组
-  useEffect(() => {
-    if (selectedTeamId) {
-      const groupsInTeam = groups.filter(group => group.team_id === selectedTeamId);
-      setFilteredGroups(groupsInTeam);
-      // 如果当前选中的组不在当前团队中，清除选中的组
-      if (selectedGroupId && !groupsInTeam.some(g => g.id === selectedGroupId)) {
-        setSelectedGroupId(null);
-        setGroupUsers([]);
-      }
-    } else {
-      setFilteredGroups([]);
-    }
-  }, [selectedTeamId, groups, selectedGroupId]);
-
-  // 获取选中团队的用户数据
-  const fetchTeamUsers = async (teamId: number) => {
+  // 获取选中团队的用户和组数据
+  const fetchTeamData = async (teamId: number) => {
     try {
       setTeamLoading(true)
       setSelectedTeamId(teamId)
+      setSelectedGroupId(null)
+      setGroupUsers([])
       setTeamError(null)
-      const response = await axios.get(`http://127.0.0.1:3000/api/teams/${teamId}/users`)
-      setTeamUsers(response.data)
+      
+      // 获取团队用户
+      const usersResponse = await axios.get(`http://127.0.0.1:3000/api/teams/${teamId}/users`)
+      setTeamUsers(usersResponse.data)
+      
+      // 获取团队下的组
+      const groupsResponse = await axios.get(`http://127.0.0.1:3000/api/teams/${teamId}/groups`)
+      setGroups(groupsResponse.data)
     } catch (err) {
-      console.error(`获取团队 ${teamId} 的用户数据失败:`, err)
+      console.error(`获取团队 ${teamId} 的数据失败:`, err)
       setTeamError(t('teams.error'))
     } finally {
       setTeamLoading(false)
     }
   }
 
-  // 获取选中组的用户数据 (注意这里使用新的API路径)
-  const fetchGroupUsers = async (teamId: number, groupId: number) => {
+  // 获取选中组的用户数据
+  const fetchGroupUsers = async (groupId: number) => {
     try {
       setGroupLoading(true)
       setSelectedGroupId(groupId)
       setGroupError(null)
-      const response = await axios.get(`http://127.0.0.1:3000/api/teams/${teamId}/groups/${groupId}/users`)
+      const response = await axios.get(`http://127.0.0.1:3000/api/groups/${groupId}/users`)
       setGroupUsers(response.data)
     } catch (err) {
-      console.error(`获取团队 ${teamId} 的组 ${groupId} 的用户数据失败:`, err)
+      console.error(`获取组 ${groupId} 的用户数据失败:`, err)
       setGroupError(t('groups.error'))
     } finally {
       setGroupLoading(false)
@@ -174,7 +137,7 @@ function App() {
                   backgroundColor: selectedTeamId === team.id ? '#e6f7ff' : 'white',
                   borderColor: selectedTeamId === team.id ? '#1890ff' : '#ddd'
                 }}
-                onClick={() => fetchTeamUsers(team.id)}
+                onClick={() => fetchTeamData(team.id)}
               >
                 {team.name}
               </div>
@@ -198,7 +161,6 @@ function App() {
                         <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.id')}</th>
                         <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.username')}</th> 
                         <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.email')}</th>
-                        <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.teamId')}</th>
                         <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.groupId')}</th>
                       </tr>
                     </thead>
@@ -208,7 +170,6 @@ function App() {
                           <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.id}</td>
                           <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.username}</td>
                           <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.email}</td>
-                          <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.team_id}</td>
                           <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.group_id}</td>
                         </tr>
                       ))}
@@ -227,8 +188,10 @@ function App() {
           <div className="groups-section" style={{ marginBottom: '40px' }}>
             <h2>{t('groups.title')} - {teams.find(t => t.id === selectedTeamId)?.name}</h2>
             <div className="groups-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' }}>
-              {filteredGroups.length > 0 ? (
-                filteredGroups.map(group => (
+              {loading ? (
+                <p>{t('app.loading')}</p>
+              ) : groups.length > 0 ? (
+                groups.map(group => (
                   <div 
                     key={group.id} 
                     className={`group-card ${selectedGroupId === group.id ? 'selected' : ''}`}
@@ -240,7 +203,7 @@ function App() {
                       backgroundColor: selectedGroupId === group.id ? '#e6f7ff' : 'white',
                       borderColor: selectedGroupId === group.id ? '#1890ff' : '#ddd'
                     }}
-                    onClick={() => fetchGroupUsers(selectedTeamId, group.id)}
+                    onClick={() => fetchGroupUsers(group.id)}
                   >
                     {group.name}
                   </div>
@@ -267,8 +230,6 @@ function App() {
                           <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.id')}</th>
                           <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.username')}</th> 
                           <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.email')}</th>
-                          <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.teamId')}</th>
-                          <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.groupId')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -277,8 +238,6 @@ function App() {
                             <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.id}</td>
                             <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.username}</td>
                             <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.email}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.team_id}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.group_id}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -291,44 +250,6 @@ function App() {
             )}
           </div>
         )}
-        
-        {/* 所有用户列表部分 */}
-        <div className="users-section">
-          <h2>{t('users.title')}</h2>
-          
-          {loading && <p>{t('app.loading')}</p>}
-          
-          {error && <p className="error" style={{ color: 'red' }}>{error}</p>}
-          
-          {!loading && !error && (
-            users.length > 0 ? (
-              <table className="users-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-                <thead>
-                  <tr>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.id')}</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.username')}</th> 
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.email')}</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.teamId')}</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('users.columns.groupId')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map(user => (
-                    <tr key={user.id}>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.id}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.username}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.email}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.team_id}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.group_id}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p>{t('app.noData')}</p>
-            )
-          )}
-        </div>
       </div>
     </>
   )
