@@ -10,6 +10,7 @@ interface User {
   email: string;
   team_id: number | null;
   group_id: number | null;
+  password: string;
 }
 
 interface Team {
@@ -21,6 +22,18 @@ interface Group {
   id: number;
   name: string;
   team_id: number;
+}
+
+interface LoginForm {
+  username: string;
+  password: string;
+}
+
+interface RegisterForm {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
 }
 
 function App() {
@@ -37,30 +50,127 @@ function App() {
   const [groupError, setGroupError] = useState<string | null>(null)
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null)
+  
+  // 登录相关状态
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [showLogin, setShowLogin] = useState<boolean>(true) // true显示登录表单，false显示注册表单
+  const [loginForm, setLoginForm] = useState<LoginForm>({ username: '', password: '' })
+  const [registerForm, setRegisterForm] = useState<RegisterForm>({ 
+    username: '', 
+    email: '', 
+    password: '', 
+    confirmPassword: '' 
+  })
+  const [authError, setAuthError] = useState<string | null>(null)
 
   // 切换语言
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };
 
-  // 获取所有团队数据
-  useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        setLoading(true)
-        const response = await axios.get('http://127.0.0.1:3000/api/teams')
-        setTeams(response.data)
-        setError(null)
-      } catch (err) {
-        console.error('获取团队数据失败:', err)
-        setError(t('teams.error'))
-      } finally {
-        setLoading(false)
+  // 处理登录表单变化
+  const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setLoginForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // 处理注册表单变化
+  const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setRegisterForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // 提交登录表单
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setAuthError(null);
+      const response = await axios.post('http://127.0.0.1:3000/api/login', {
+        username: loginForm.username,
+        password: loginForm.password
+      });
+      
+      setCurrentUser(response.data);
+      setIsLoggedIn(true);
+      // 清空表单
+      setLoginForm({ username: '', password: '' });
+      
+      // 登录成功后加载团队数据
+      fetchTeams();
+    } catch (err: any) {
+      console.error('登录失败:', err);
+      if (err.response && err.response.status === 401) {
+        setAuthError(t('auth.invalidCredentials'));
+      } else {
+        setAuthError(t('auth.loginError'));
       }
     }
+  };
 
-    fetchTeams()
-  }, [t])
+  // 提交注册表单
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // 验证密码
+    if (registerForm.password !== registerForm.confirmPassword) {
+      setAuthError(t('auth.passwordMismatch'));
+      return;
+    }
+    
+    try {
+      setAuthError(null);
+      const response = await axios.post('http://127.0.0.1:3000/api/register', {
+        username: registerForm.username,
+        email: registerForm.email,
+        password: registerForm.password
+      });
+      
+      setCurrentUser(response.data);
+      setIsLoggedIn(true);
+      // 清空表单
+      setRegisterForm({ username: '', email: '', password: '', confirmPassword: '' });
+      
+      // 注册成功后加载团队数据
+      fetchTeams();
+    } catch (err) {
+      console.error('注册失败:', err);
+      setAuthError(t('auth.registerError'));
+    }
+  };
+
+  // 处理退出登录
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setSelectedTeamId(null);
+    setSelectedGroupId(null);
+    setTeams([]);
+    setGroups([]);
+    setTeamUsers([]);
+    setGroupUsers([]);
+  };
+
+  // 获取所有团队数据
+  const fetchTeams = async () => {
+    try {
+      setLoading(true)
+      const response = await axios.get('http://127.0.0.1:3000/api/teams')
+      setTeams(response.data)
+      setError(null)
+    } catch (err) {
+      console.error('获取团队数据失败:', err)
+      setError(t('teams.error'))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // 获取选中团队的用户和组数据
   const fetchTeamData = async (teamId: number) => {
@@ -102,23 +212,201 @@ function App() {
     }
   }
 
-  return (
+  // 渲染登录表单
+  const renderLoginForm = () => (
+    <div className="login-form" style={{ 
+      maxWidth: '400px', 
+      margin: '50px auto', 
+      padding: '20px', 
+      border: '1px solid #ddd', 
+      borderRadius: '8px',
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+    }}>
+      <h2>{t('auth.login')}</h2>
+      {authError && <p style={{ color: 'red' }}>{authError}</p>}
+      <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '5px' }}>{t('auth.username')}</label>
+          <input 
+            type="text" 
+            name="username" 
+            value={loginForm.username} 
+            onChange={handleLoginChange} 
+            required 
+            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '5px' }}>{t('auth.password')}</label>
+          <input 
+            type="password" 
+            name="password" 
+            value={loginForm.password} 
+            onChange={handleLoginChange} 
+            required 
+            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          />
+        </div>
+        <button 
+          type="submit" 
+          style={{ 
+            padding: '10px', 
+            backgroundColor: '#1890ff', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer'
+          }}
+        >
+          {t('auth.loginButton')}
+        </button>
+      </form>
+      <p style={{ marginTop: '15px', textAlign: 'center' }}>
+        {t('auth.noAccount')} 
+        <button 
+          onClick={() => { setShowLogin(false); setAuthError(null); }} 
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            color: '#1890ff', 
+            cursor: 'pointer', 
+            textDecoration: 'underline'
+          }}
+        >
+          {t('auth.register')}
+        </button>
+      </p>
+    </div>
+  );
+
+  // 渲染注册表单
+  const renderRegisterForm = () => (
+    <div className="register-form" style={{ 
+      maxWidth: '400px', 
+      margin: '50px auto', 
+      padding: '20px', 
+      border: '1px solid #ddd', 
+      borderRadius: '8px',
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+    }}>
+      <h2>{t('auth.register')}</h2>
+      {authError && <p style={{ color: 'red' }}>{authError}</p>}
+      <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '5px' }}>{t('auth.username')}</label>
+          <input 
+            type="text" 
+            name="username" 
+            value={registerForm.username} 
+            onChange={handleRegisterChange} 
+            required 
+            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '5px' }}>{t('auth.email')}</label>
+          <input 
+            type="email" 
+            name="email" 
+            value={registerForm.email} 
+            onChange={handleRegisterChange} 
+            required 
+            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '5px' }}>{t('auth.password')}</label>
+          <input 
+            type="password" 
+            name="password" 
+            value={registerForm.password} 
+            onChange={handleRegisterChange} 
+            required 
+            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '5px' }}>{t('auth.confirmPassword')}</label>
+          <input 
+            type="password" 
+            name="confirmPassword" 
+            value={registerForm.confirmPassword} 
+            onChange={handleRegisterChange} 
+            required 
+            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          />
+        </div>
+        <button 
+          type="submit" 
+          style={{ 
+            padding: '10px', 
+            backgroundColor: '#1890ff', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer'
+          }}
+        >
+          {t('auth.registerButton')}
+        </button>
+      </form>
+      <p style={{ marginTop: '15px', textAlign: 'center' }}>
+        {t('auth.haveAccount')} 
+        <button 
+          onClick={() => { setShowLogin(true); setAuthError(null); }} 
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            color: '#1890ff', 
+            cursor: 'pointer', 
+            textDecoration: 'underline'
+          }}
+        >
+          {t('auth.login')}
+        </button>
+      </p>
+    </div>
+  );
+
+  // 渲染用户已登录后的内容
+  const renderLoggedInContent = () => (
     <>
       <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        {/* 语言切换按钮 */}
-        <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-          <button 
-            onClick={() => changeLanguage('zh')} 
-            style={{ marginRight: '10px', padding: '5px 10px' }}
-          >
-            中文
-          </button>
-          <button 
-            onClick={() => changeLanguage('en')} 
-            style={{ padding: '5px 10px' }}
-          >
-            English
-          </button>
+        {/* 顶部栏 */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '20px',
+          padding: '10px',
+          borderBottom: '1px solid #ddd'
+        }}>
+          <h1>{t('app.title')}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {/* 显示当前用户信息 */}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ marginRight: '10px' }}>{t('auth.welcome')}, {currentUser?.username}</span>
+              <button onClick={handleLogout} style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #ddd' }}>
+                {t('auth.logout')}
+              </button>
+            </div>
+            
+            {/* 语言切换按钮 */}
+            <div>
+              <button 
+                onClick={() => changeLanguage('zh')} 
+                style={{ marginRight: '10px', padding: '5px 10px' }}
+              >
+                中文
+              </button>
+              <button 
+                onClick={() => changeLanguage('en')} 
+                style={{ padding: '5px 10px' }}
+              >
+                English
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* 团队部分 */}
@@ -251,6 +539,12 @@ function App() {
           </div>
         )}
       </div>
+    </>
+  );
+
+  return (
+    <>
+      {isLoggedIn ? renderLoggedInContent() : (showLogin ? renderLoginForm() : renderRegisterForm())}
     </>
   )
 }
