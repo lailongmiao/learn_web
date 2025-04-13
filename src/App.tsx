@@ -106,8 +106,16 @@ function App() {
       fetchTeams();
     } catch (err: any) {
       console.error('登录失败:', err);
-      if (err.response && err.response.status === 401) {
-        setAuthError(t('auth.invalidCredentials'));
+      // 根据服务器返回的错误信息设置合适的错误提示
+      if (err.response) {
+        const errorMessage = err.response.data;
+        if (errorMessage.includes('用户不存在')) {
+          setAuthError(t('auth.userNotFound'));
+        } else if (errorMessage.includes('密码错误')) {
+          setAuthError(t('auth.invalidPassword'));
+        } else {
+          setAuthError(t('auth.loginError'));
+        }
       } else {
         setAuthError(t('auth.loginError'));
       }
@@ -124,24 +132,74 @@ function App() {
       return;
     }
     
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(registerForm.email)) {
+      setAuthError(t('auth.emailInvalid'));
+      return;
+    }
+    
+    // 验证用户名不为空
+    if (!registerForm.username.trim()) {
+      setAuthError(t('auth.usernameRequired'));
+      return;
+    }
+    
+    // 验证密码长度
+    if (registerForm.password.length < 6) {
+      setAuthError(t('auth.passwordTooShort'));
+      return;
+    }
+    
     try {
       setAuthError(null);
-      const response = await axios.post('http://127.0.0.1:3000/api/register', {
+      await axios.post('http://127.0.0.1:3000/api/register', {
         username: registerForm.username,
         email: registerForm.email,
         password: registerForm.password
       });
       
-      setCurrentUser(response.data);
-      setIsLoggedIn(true);
+      // 注册成功，显示成功信息并跳转到登录页
+      setAuthError(null);
       // 清空表单
       setRegisterForm({ username: '', email: '', password: '', confirmPassword: '' });
       
-      // 注册成功后加载团队数据
-      fetchTeams();
-    } catch (err) {
+      // 显示注册成功信息
+      alert(t('auth.registerSuccess'));
+      
+      // 转到登录页面
+      setShowLogin(true);
+    } catch (err: any) {
       console.error('注册失败:', err);
-      setAuthError(t('auth.registerError'));
+      
+      // 解析后端返回的错误信息
+      if (err.response) {
+        const errorMessage = err.response.data;
+        
+        if (errorMessage.includes('验证错误')) {
+          if (errorMessage.includes('email')) {
+            setAuthError(t('auth.emailInvalid'));
+          } else if (errorMessage.includes('username')) {
+            setAuthError(t('auth.usernameRequired'));
+          } else if (errorMessage.includes('password')) {
+            setAuthError(t('auth.passwordTooShort'));
+          } else {
+            setAuthError(t('auth.validationError'));
+          }
+        } else if (errorMessage.includes('duplicate key')) {
+          if (errorMessage.includes('username')) {
+            setAuthError(t('auth.usernameTaken'));
+          } else if (errorMessage.includes('email')) {
+            setAuthError(t('auth.emailTaken'));
+          } else {
+            setAuthError(t('auth.registerError'));
+          }
+        } else {
+          setAuthError(t('auth.registerError'));
+        }
+      } else {
+        setAuthError(t('auth.registerError'));
+      }
     }
   };
 
@@ -236,7 +294,7 @@ function App() {
             style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
           />
         </div>
-        <div>
+      <div>
           <label style={{ display: 'block', marginBottom: '5px' }}>{t('auth.password')}</label>
           <input 
             type="password" 
@@ -246,7 +304,7 @@ function App() {
             required 
             style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
           />
-        </div>
+      </div>
         <button 
           type="submit" 
           style={{ 
@@ -275,8 +333,8 @@ function App() {
         >
           {t('auth.register')}
         </button>
-      </p>
-    </div>
+        </p>
+      </div>
   );
 
   // 渲染注册表单

@@ -20,7 +20,17 @@
     "passwordMismatch": "Passwords do not match",
     "invalidCredentials": "Invalid username or password",
     "loginError": "Login failed, please try again later",
-    "registerError": "Registration failed, please try again later"
+    "registerError": "Registration failed, please try again later",
+    "userNotFound": "User not found",
+    "invalidPassword": "Invalid password",
+    "databaseError": "Database error, please try again later",
+    "validationError": "Form validation failed, please check your input",
+    "emailInvalid": "Please enter a valid email address",
+    "usernameRequired": "Username is required",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "registerSuccess": "Registration successful, please login",
+    "usernameTaken": "Username is already taken",
+    "emailTaken": "Email is already registered"
   },
   "teams": {
     "title": "Team List",
